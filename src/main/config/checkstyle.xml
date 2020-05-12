@@ -83,7 +83,9 @@
       <metadata name="net.sf.eclipsecs.core.lastEnabledSeverity" value="inherit"/>
     </module>
     <module name="MissingSwitchDefault"/>
-    <module name="RedundantThrows"/>
+    <module name="RedundantThrows">
+      <property name="suppressLoadErrors" value="true"/>
+    </module>
     <module name="SimplifyBooleanExpression">
       <property name="severity" value="ignore"/>
       <metadata name="net.sf.eclipsecs.core.lastEnabledSeverity" value="inherit"/>

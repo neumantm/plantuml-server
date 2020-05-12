@@ -23,30 +23,39 @@
  */
 package net.sourceforge.plantuml.servlet;
 
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import net.sourceforge.plantuml.BlockUml;
+import net.sourceforge.plantuml.ErrorUml;
 import net.sourceforge.plantuml.FileFormat;
 import net.sourceforge.plantuml.FileFormatOption;
-import net.sourceforge.plantuml.OptionFlags;
+import net.sourceforge.plantuml.GeneratedImage;
 import net.sourceforge.plantuml.NullOutputStream;
+import net.sourceforge.plantuml.OptionFlags;
+import net.sourceforge.plantuml.SourceFileReader;
 import net.sourceforge.plantuml.SourceStringReader;
 import net.sourceforge.plantuml.StringUtils;
 import net.sourceforge.plantuml.code.Base64Coder;
-import net.sourceforge.plantuml.core.DiagramDescription;
 import net.sourceforge.plantuml.core.Diagram;
+import net.sourceforge.plantuml.core.DiagramDescription;
 import net.sourceforge.plantuml.core.ImageData;
-import net.sourceforge.plantuml.version.Version;
 import net.sourceforge.plantuml.error.PSystemError;
-import net.sourceforge.plantuml.ErrorUml;
+import net.sourceforge.plantuml.servlet.utility.StreamIOHelper;
+import net.sourceforge.plantuml.version.Version;
 
 
 /**
@@ -62,7 +71,7 @@ class DiagramResponse {
     private HttpServletRequest request;
     private static final Map<FileFormat, String> CONTENT_TYPE;
     static {
-        Map<FileFormat, String> map = new HashMap<FileFormat, String>();
+        Map<FileFormat, String> map = new HashMap<>();
         map.put(FileFormat.PNG, "image/png");
         map.put(FileFormat.SVG, "image/svg+xml");
         map.put(FileFormat.EPS, "application/postscript");
@@ -110,6 +119,40 @@ class DiagramResponse {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         }
         final ImageData result = diagram.exportDiagram(response.getOutputStream(), idx, new FileFormatOption(format));
+    }
+
+    void sendDiagram(Path diagramFile, int idx) throws IOException {
+        response.addHeader("Access-Control-Allow-Origin", "*");
+        response.setContentType(getContentType());
+        SourceFileReader reader = new SourceFileReader(diagramFile.toFile());
+        FileFormatOption ffo = new FileFormatOption(format);
+        if (format == FileFormat.BASE64) {
+            ffo = new FileFormatOption(FileFormat.PNG);
+        }
+
+        reader.setFileFormatOption(ffo);
+        List<GeneratedImage> images = reader.getGeneratedImages();
+        File f = images.get(idx).getPngFile();
+        OutputStream ros = response.getOutputStream();
+
+        OutputStream osToWriteTo = ros;
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        if (format == FileFormat.BASE64) {
+            osToWriteTo = baos;
+        }
+
+        try (InputStream is = new FileInputStream(f)) {
+            StreamIOHelper.transferTo(is, osToWriteTo);
+            osToWriteTo.close();
+        }
+
+        if (format == FileFormat.BASE64) {
+            final String encodedBytes = "data:image/png;base64,"
+                    + Base64Coder.encodeLines(baos.toByteArray()).replaceAll("\\s", "");
+            ros.write(encodedBytes.getBytes());
+            ros.close();
+        }
     }
 
     private boolean notModified(BlockUml blockUml) {
@@ -184,5 +227,4 @@ class DiagramResponse {
     private String getContentType() {
         return CONTENT_TYPE.get(format);
     }
-
 }

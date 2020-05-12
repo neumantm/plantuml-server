@@ -197,6 +197,18 @@
       <version>0.3-3</version>
     </dependency>
     <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.json</artifactId>
+      <!-- Newer version produce errors with the old version of asm included in jetty-all.  
+           See: https://stackoverflow.com/questions/26496338/strange-java-lang-arrayindexoutofboundsexception-thrown-on-jetty-startup-->
+      <version>1.0.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <version>1.20</version>
+    </dependency>  
+    <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>servlet-api</artifactId>
       <version>2.5</version>
